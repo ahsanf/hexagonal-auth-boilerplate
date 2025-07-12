@@ -1,4 +1,4 @@
-export type RefreshTokenPgEntity = {
+export type RefreshTokenSqlEntity = {
   id: number;
   user_id: number;
   token: string;

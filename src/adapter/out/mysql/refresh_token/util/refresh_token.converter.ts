@@ -1,7 +1,7 @@
 import { RefreshToken } from "@domain/refresh_token";
-import { RefreshTokenPgEntity } from "../entity/refresh_token_pg.entity";
+import { RefreshTokenSqlEntity } from "../entity/refresh_token_pg.entity";
 
-export const toDomain = (entity: RefreshTokenPgEntity): RefreshToken => {
+export const toDomain = (entity: RefreshTokenSqlEntity): RefreshToken => {
   return {
     id: entity.id,
     userId: entity.user_id,
@@ -14,7 +14,7 @@ export const toDomain = (entity: RefreshTokenPgEntity): RefreshToken => {
   };
 }
 
-export const toEntity = (domain: RefreshToken): RefreshTokenPgEntity => {
+export const toEntity = (domain: RefreshToken): RefreshTokenSqlEntity => {
   return {
     id: domain.id,
     user_id: domain.userId,
@@ -27,7 +27,7 @@ export const toEntity = (domain: RefreshToken): RefreshTokenPgEntity => {
   };
 };
 
-export const toPartialEntity = (domain: Partial<RefreshToken>): Partial<RefreshTokenPgEntity> => {
+export const toPartialEntity = (domain: Partial<RefreshToken>): Partial<RefreshTokenSqlEntity> => {
   return {
     id: domain.id,
     user_id: domain.userId,
@@ -40,7 +40,7 @@ export const toPartialEntity = (domain: Partial<RefreshToken>): Partial<RefreshT
   };
 };
 
-export const toPartialDomain = (entity: Partial<RefreshTokenPgEntity>): Partial<RefreshToken> => {
+export const toPartialDomain = (entity: Partial<RefreshTokenSqlEntity>): Partial<RefreshToken> => {
   return {
     id: entity.id,
     userId: entity.user_id,

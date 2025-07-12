@@ -1,7 +1,7 @@
 import { User } from "@domain/user";
-import { UserPgEntity } from "../entity/user_pg.entity";
+import { UserSqlEntity } from "../entity/user_pg.entity";
 
-export const toDomain = (entity: UserPgEntity): User => {
+export const toDomain = (entity: UserSqlEntity): User => {
   return {
     id: entity.id,
     name: entity.name,
@@ -23,7 +23,7 @@ export const toDomain = (entity: UserPgEntity): User => {
   };
 }
 
-export const toEntity = (domain: User): UserPgEntity => {
+export const toEntity = (domain: User): UserSqlEntity => {
   return {
     id: domain.id,
     name: domain.name,
@@ -45,7 +45,7 @@ export const toEntity = (domain: User): UserPgEntity => {
   };
 }
 
-export const toPartialDomain = (entity: Partial<UserPgEntity>): Partial<User> => {
+export const toPartialDomain = (entity: Partial<UserSqlEntity>): Partial<User> => {
   return {
     id: entity.id,
     name: entity.name,
@@ -67,7 +67,7 @@ export const toPartialDomain = (entity: Partial<UserPgEntity>): Partial<User> =>
   };
 }
 
-export const toPartialEntity = (domain: Partial<User>): Partial<UserPgEntity> => {
+export const toPartialEntity = (domain: Partial<User>): Partial<UserSqlEntity> => {
   return {
     id: domain.id,
     name: domain.name,

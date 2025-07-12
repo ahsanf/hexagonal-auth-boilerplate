@@ -1,4 +1,4 @@
-export type UserPgEntity = {
+export type UserSqlEntity = {
   id: number
   name: string
   email: string

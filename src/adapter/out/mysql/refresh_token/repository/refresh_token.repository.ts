@@ -8,24 +8,25 @@ import { Filter } from "@domain/filter";
 import { logger } from "@logger";
 import { Stats } from "@domain/stats";
 import { IRefreshTokenPgRepository } from "./refresh_token.base_repository";
-import { RefreshTokenPgEntity } from "../entity/refresh_token_pg.entity";
+import { RefreshTokenSqlEntity } from "../entity/refresh_token_pg.entity";
 import { TABLE_NAME } from "@domain/constant";
+import { getMysqlClient } from "@mysql";
 
 export class RefreshTokenPgRepository implements IRefreshTokenPgRepository { 
-  private readonly orm: Knex.QueryBuilder<RefreshTokenPgEntity, RefreshTokenPgEntity[]>;
+  private readonly orm: Knex.QueryBuilder<RefreshTokenSqlEntity, RefreshTokenSqlEntity[]>;
   
   constructor() {
-    this.orm = getPostgresClient()<RefreshTokenPgEntity>(TABLE_NAME.REFRESH_TOKENS)
+    this.orm = getMysqlClient()<RefreshTokenSqlEntity>(TABLE_NAME.REFRESH_TOKENS)
   }
   
-  private applyFilters(builder: Knex.QueryBuilder<RefreshTokenPgEntity, RefreshTokenPgEntity[]>, filter?: Filter) {
+  private applyFilters(builder: Knex.QueryBuilder<RefreshTokenSqlEntity, RefreshTokenSqlEntity[]>, filter?: Filter) {
     if (filter?.query) {
       builder.whereILike("name", `%${filter.query}%`);
     }
 
   }
   
-  async getAll(currentPage: number = 1, perPage: number = 10, filter?: Filter, traceId?: string):  Promise<{ data: RefreshTokenPgEntity[], stats: Stats }>{
+  async getAll(currentPage: number = 1, perPage: number = 10, filter?: Filter, traceId?: string):  Promise<{ data: RefreshTokenSqlEntity[], stats: Stats }>{
     logger.info(this.getAll.name, RefreshTokenPgRepository.name, traceId);
     
     const offset = (currentPage - 1) * perPage;
@@ -54,7 +55,7 @@ export class RefreshTokenPgRepository implements IRefreshTokenPgRepository {
   
   }
 
-  async getById(id: number, traceId?: string): Promise<RefreshTokenPgEntity | null> {
+  async getById(id: number, traceId?: string): Promise<RefreshTokenSqlEntity | null> {
     logger.info(this.getById.name, RefreshTokenPgRepository.name, traceId);
   
     return this.orm
@@ -64,7 +65,7 @@ export class RefreshTokenPgRepository implements IRefreshTokenPgRepository {
       .then((result) => result ?? null);
   }
   
-  async create(data: RefreshTokenPgEntity, traceId?: string): Promise<RefreshTokenPgEntity> {
+  async create(data: RefreshTokenSqlEntity, traceId?: string): Promise<RefreshTokenSqlEntity> {
     logger.info(this.create.name, RefreshTokenPgRepository.name, traceId);
   
     const [created] = await this.orm
@@ -75,7 +76,7 @@ export class RefreshTokenPgRepository implements IRefreshTokenPgRepository {
     return created;
   }
   
-  async update(id: number, data: Partial<RefreshTokenPgEntity>, traceId?: string): Promise<RefreshTokenPgEntity | null> {
+  async update(id: number, data: Partial<RefreshTokenSqlEntity>, traceId?: string): Promise<RefreshTokenSqlEntity | null> {
     logger.info(this.update.name, RefreshTokenPgRepository.name, traceId);
   
     const [updated] = await this.orm

@@ -4,28 +4,29 @@
 import { getPostgresClient } from "@util/postgres/postgres";
 
 import { Knex } from "knex";
-import { UserPgEntity } from "../entity/user_pg.entity";
+import { UserSqlEntity } from "../entity/user_pg.entity";
 import { Filter } from "@domain/filter";
 import { logger } from "@logger";
 import { IUserPgRepository } from "./user.base_repository";
 import { Stats } from "@domain/stats";
 import { TABLE_NAME } from "@domain/constant";
+import { getMysqlClient } from "@mysql";
 
 export class UserPgRepository implements IUserPgRepository { 
-  private readonly orm: Knex.QueryBuilder<UserPgEntity, UserPgEntity[]>;
+  private readonly orm: Knex.QueryBuilder<UserSqlEntity, UserSqlEntity[]>;
   
   constructor() {
-    this.orm = getPostgresClient()<UserPgEntity>(TABLE_NAME.USERS)
+    this.orm = getMysqlClient()<UserSqlEntity>(TABLE_NAME.USERS)
   }
   
-  private applyFilters(builder: Knex.QueryBuilder<UserPgEntity, UserPgEntity[]>, filter?: Filter) {
+  private applyFilters(builder: Knex.QueryBuilder<UserSqlEntity, UserSqlEntity[]>, filter?: Filter) {
     if (filter?.query) {
       builder.whereILike("name", `%${filter.query}%`);
     }
 
   }
   
-  async getAll(currentPage: number = 1, perPage: number = 10, filter?: Filter, traceId?: string):  Promise<{ data: UserPgEntity[], stats: Stats }>{
+  async getAll(currentPage: number = 1, perPage: number = 10, filter?: Filter, traceId?: string):  Promise<{ data: UserSqlEntity[], stats: Stats }>{
     logger.info(this.getAll.name, UserPgRepository.name, traceId);
     
     const offset = (currentPage - 1) * perPage;
@@ -54,7 +55,7 @@ export class UserPgRepository implements IUserPgRepository {
   
   }
 
-  async getById(id: number, traceId?: string): Promise<UserPgEntity | null> {
+  async getById(id: number, traceId?: string): Promise<UserSqlEntity | null> {
     logger.info(this.getById.name, UserPgRepository.name, traceId);
   
     return this.orm
@@ -64,7 +65,7 @@ export class UserPgRepository implements IUserPgRepository {
       .then((result) => result ?? null);
   }
   
-  async create(data: UserPgEntity, traceId?: string): Promise<UserPgEntity> {
+  async create(data: UserSqlEntity, traceId?: string): Promise<UserSqlEntity> {
     logger.info(this.create.name, UserPgRepository.name, traceId);
   
     const [created] = await this.orm
@@ -75,7 +76,7 @@ export class UserPgRepository implements IUserPgRepository {
     return created;
   }
   
-  async update(id: number, data: Partial<UserPgEntity>, traceId?: string): Promise<UserPgEntity | null> {
+  async update(id: number, data: Partial<UserSqlEntity>, traceId?: string): Promise<UserSqlEntity | null> {
     logger.info(this.update.name, UserPgRepository.name, traceId);
   
     const [updated] = await this.orm
