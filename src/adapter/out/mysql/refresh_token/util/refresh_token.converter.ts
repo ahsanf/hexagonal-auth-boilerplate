@@ -1,5 +1,5 @@
 import { RefreshToken } from "@domain/refresh_token";
-import { RefreshTokenSqlEntity } from "../entity/refresh_token_pg.entity";
+import { RefreshTokenSqlEntity } from "../entity/refresh_token_sql.entity";
 
 export const toDomain = (entity: RefreshTokenSqlEntity): RefreshToken => {
   return {

@@ -1,5 +1,5 @@
 import { User } from "@domain/user";
-import { UserSqlEntity } from "../entity/user_pg.entity";
+import { UserSqlEntity } from "../entity/user_sql.entity";
 
 export const toDomain = (entity: UserSqlEntity): User => {
   return {

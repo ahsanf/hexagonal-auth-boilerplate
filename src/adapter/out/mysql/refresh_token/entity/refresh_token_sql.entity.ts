@@ -1,5 +1,5 @@
 export type RefreshTokenSqlEntity = {
-  id: number;
+  id?: number;
   user_id: number;
   token: string;
   expired_at: Date;

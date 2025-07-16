@@ -1,5 +1,5 @@
 import { Filter } from "@domain/filter"
-import { UserSqlEntity } from "../entity/user_pg.entity"
+import { UserSqlEntity } from "../entity/user_sql.entity"
 import { Stats } from "@domain/stats"
 
 export interface IUserPgRepository {
@@ -8,4 +8,6 @@ export interface IUserPgRepository {
   create(data: UserSqlEntity, traceId?: string): Promise<UserSqlEntity>
   update(id: number, data: Partial<UserSqlEntity>, traceId?: string): Promise<Partial<UserSqlEntity> | null>
   delete(id: number, traceId?: string): Promise<boolean>
+
+  getByUsernameOrEmail(usernameOrEmail:  string, traceId?: string): Promise<UserSqlEntity | null>
 }

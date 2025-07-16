@@ -1,5 +1,5 @@
 export type RefreshToken = {
-  id: number
+  id?: number
   userId: number
   token: string
   userAgent?: string
