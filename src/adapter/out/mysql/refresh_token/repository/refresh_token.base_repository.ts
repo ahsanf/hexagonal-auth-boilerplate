@@ -9,6 +9,7 @@ export interface IRefreshTokenSqlRepository {
   update(id: number, data: Partial<RefreshTokenSqlEntity>, traceId?: string): Promise<Partial<RefreshTokenSqlEntity> | null>
   delete(id: number, traceId?: string): Promise<boolean>
 
-  getByUserId(userId: number, traceId?: string): Promise<RefreshTokenSqlEntity | null> 
+  getByUserId(userId: number, traceId?: string): Promise<RefreshTokenSqlEntity | null>
+  getByToken(token: string, traceId?: string): Promise<RefreshTokenSqlEntity | null>
   
 }

@@ -4,6 +4,7 @@ export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('users', (table) => {
     table.increments('id').primary();
     table.string('name').notNullable();
+    table.string('username').notNullable();
     table.string('email').notNullable().unique();
     table.string('password').notNullable();
     table.string('phone');
@@ -15,7 +16,6 @@ export async function up(knex: Knex): Promise<void> {
     table.timestamp('last_login');
     table.timestamp('last_password_change');
     table.boolean('email_verified').defaultTo(false);
-    table.string('refresh_token');
     table.string('google_id');
     table.timestamp('created_at').defaultTo(knex.fn.now());
     table.timestamp('updated_at').defaultTo(knex.fn.now());

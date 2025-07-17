@@ -1,11 +1,13 @@
-import { User, UserLoginResponse } from "@domain/user"
+import { Tracing, User, UserLoginResponse } from "@domain/user"
 
 export interface IAuthUseCase {
-  login(data: Partial<User>, traceId?: string): Promise<UserLoginResponse>
-  register(data: Partial<User>, traceId?: string): Promise<UserLoginResponse>
-  logout(accessToken: string, refreshToken: string, traceId?: string ): Promise<void>
+  login(data: Partial<User>, tracing: Tracing, traceId?: string): Promise<UserLoginResponse>
+  register(data: Partial<User>, tracing: Tracing, traceId?: string): Promise<{otpCode: string}>
+  logout(accessToken: string, refreshToken: string, traceId?: string): Promise<void>
   changePassword(id: number, data: {oldPassword: string, newPassword: string},  traceId?: string): Promise<void>
 
   verifyOtp(otpRequest: string, otpSignature: string, traceId?: string ): Promise<string>
-  refreshAccessToken(refreshToken: string, traceId?: string ): Promise<UserLoginResponse>
+  refreshAccessToken(refreshToken: string, tracing: Tracing, traceId?: string): Promise<UserLoginResponse>
+
+  
 }

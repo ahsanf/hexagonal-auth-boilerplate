@@ -19,6 +19,11 @@ export type User = {
   updatedAt?: Date
 }
 
+export type Tracing = {
+  ipAddress?: string
+  userAgent?: string
+}
+
 export type UserLoginResponse = {
   user:{
     id: number,

@@ -10,4 +10,5 @@ export interface IRefreshTokenSqlAdapter {
   delete(id: number, traceId?: string): Promise<boolean>
 
   getByUserId(userId: number, traceId?: string): Promise<RefreshToken | null>
+  getByToken(token: string, traceId?: string): Promise<RefreshToken | null>
 }

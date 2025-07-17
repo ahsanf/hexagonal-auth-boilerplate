@@ -31,6 +31,14 @@ export class RefreshTokenSqlAdapter implements IRefreshTokenSqlAdapter {
 
     return toDomain(refreshToken);
   }
+
+  async getByToken(token: string, traceId?: string): Promise<RefreshToken | null> {
+    logger.info(this.getByToken.name, RefreshTokenSqlAdapter.name, traceId);
+    const refreshToken = await this.refreshTokenPgRepository.getByToken(token, traceId);
+    if (!refreshToken) return null;
+
+    return toDomain(refreshToken);
+  }
   
   async getById(id: number, traceId?: string): Promise<RefreshToken | null> {
     logger.info(this.getById.name, RefreshTokenSqlAdapter.name, traceId);

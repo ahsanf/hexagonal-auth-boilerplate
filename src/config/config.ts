@@ -61,6 +61,7 @@ const MAIL_CONFIG = {
     user: getEnv('MAIL_USER'),
     pass: getEnv('MAIL_PASSWORD'),
   },
+  sender: getEnv('MAIL_SENDER', 'noreply@domain.com')
 };
 
 const MONGO_CONFIG = {
