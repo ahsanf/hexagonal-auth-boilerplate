@@ -4,21 +4,21 @@ export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('users', (table) => {
     table.increments('id').primary();
     table.string('name').notNullable();
-    table.string('username').notNullable();
     table.string('email').notNullable().unique();
     table.string('password').notNullable();
-    table.string('phone');
-    table.text('address');
-    table.string('lang', 10);
-    table.string('image_url');
-    table.boolean('is_active').defaultTo(true);
-    table.specificType('roles', 'text[]');
-    table.timestamp('last_login');
-    table.timestamp('last_password_change');
-    table.boolean('email_verified').defaultTo(false);
-    table.string('google_id');
-    table.timestamp('created_at').defaultTo(knex.fn.now());
-    table.timestamp('updated_at').defaultTo(knex.fn.now());
+    table.string('phone').nullable();
+    table.text('address').nullable();
+    table.string('lang', 10).nullable();
+    table.string('image_url').nullable();
+    table.boolean('is_active').defaultTo(true).nullable();
+    table.json('roles').nullable();
+    table.timestamp('last_login').nullable();
+    table.timestamp('last_password_change').nullable();
+    table.boolean('email_verified').defaultTo(false).nullable();
+    table.string('refresh_token').nullable();
+    table.string('google_id').nullable();
+    table.timestamp('created_at').defaultTo(knex.fn.now()).nullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).nullable();
   });
 
   await knex.schema.createTable('refresh_tokens', (table) => {
@@ -26,15 +26,16 @@ export async function up(knex: Knex): Promise<void> {
     table
       .integer('user_id')
       .unsigned()
+      .notNullable()
       .references('id')
       .inTable('users')
       .onDelete('CASCADE');
     table.string('token').notNullable();
     table.timestamp('expired_at').notNullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now());
-    table.timestamp('updated_at').defaultTo(knex.fn.now());
-    table.string('user_agent');
-    table.string('ip_address');
+    table.timestamp('created_at').defaultTo(knex.fn.now()).nullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).nullable();
+    table.string('user_agent').nullable();
+    table.string('ip_address').nullable();
   });
 }
 

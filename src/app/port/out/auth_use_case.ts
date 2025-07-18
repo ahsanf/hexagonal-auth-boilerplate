@@ -8,6 +8,4 @@ export interface IAuthUseCase {
 
   verifyOtp(otpRequest: string, otpSignature: string, traceId?: string ): Promise<string>
   refreshAccessToken(refreshToken: string, tracing: Tracing, traceId?: string): Promise<UserLoginResponse>
-
-  
 }
