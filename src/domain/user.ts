@@ -22,6 +22,7 @@ export type User = {
 export type Tracing = {
   ipAddress?: string
   userAgent?: string
+  macAddress?: string
 }
 
 export type UserLoginResponse = {

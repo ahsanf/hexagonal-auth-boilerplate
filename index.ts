@@ -10,7 +10,9 @@ import { initMysql } from './src/util/mysql/mysql';
 import { initMongo } from './src/util/mongodb/mongodb';
 
 import { initRabbitMQ } from './src/util/rabbitmq/rabbitmq';
-import { config } from '@config';
+import { config } from './src/config/config';
+import { AuthRestController } from './src/adapter/in/rest/auth/controller/auth.controller';
+
 
 const app: Express = express()
 const port = config.app.appPort
@@ -26,11 +28,12 @@ app.use(cookieParser())
 app.use(loggingMiddleware)
 
 // Init configuration
-// initMysql()
+initMysql()
 // initMongo()
 // initRabbitMQ()
 // initPostgres()
 
+new AuthRestController(app).init()
 // const domainController = new DomainController(app, apiVersion)
 
 // domainController.init()

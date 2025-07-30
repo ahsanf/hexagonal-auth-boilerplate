@@ -7,4 +7,5 @@ export type RefreshTokenSqlEntity = {
   updated_at?: Date;
   user_agent?: string;
   ip_address?: string;
-}
+  mac_address?: string;
+};

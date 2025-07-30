@@ -4,6 +4,7 @@ export type RefreshToken = {
   token: string
   userAgent?: string
   ipAddress?: string
+  macAddress?: string
   expiredAt: Date
   createdAt?: Date
   updatedAt?: Date
