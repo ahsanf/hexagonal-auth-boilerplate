@@ -10,6 +10,7 @@ const args = Object.fromEntries(
     return [key, val];
   })
 );
+
 //Usages: bun run generate.ts --domain=User --domainFile=user.ts --entityFile=user_sql.ts --mode=mysql
 const domain = args.domain; // ${domainCamel}
 const domainFile = args.domainFile; // ${domainSnake}.ts
@@ -379,13 +380,13 @@ if(mode === 'mongodb'){
   `
 
   const serviceContent = `
-  import { ${domainCamel}${modeTitle}Adapter } from "@dapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.adapter";
-  import { I${domainCamel}${modeTitle}Adapter } from "@dapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.base_adapter";
+  import { ${domainCamel}${modeTitle}Adapter } from "@adapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.adapter";
+  import { I${domainCamel}${modeTitle}Adapter } from "@adapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.base_adapter";
   import { ${domainCamel} } from "@domain/${domainSnake}";
   import { Filter } from "@domain/filter";
   import { Stats } from "@domain/stats";
   import { logger } from "@logger";
-  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}_${mode}.use_case";
+  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}.use_case";
 
   export class ${domainCamel}Service implements I${domainCamel}UseCase {
     private ${mode}Adapter: I${domainCamel}${modeTitle}Adapter;
@@ -780,8 +781,8 @@ if(mode === 'mysql') {
   `
 
   const serviceContent = `
-  import { ${domainCamel}${modeTitle}Adapter } from "@dapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.adapter";
-  import { I${domainCamel}${modeTitle}Adapter } from "@dapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.base_adapter";
+  import { ${domainCamel}${modeTitle}Adapter } from "@adapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.adapter";
+  import { I${domainCamel}${modeTitle}Adapter } from "@adapter_out/${mode}/${domainSnake}/adapter/${domainSnake}_${mode}.base_adapter";
   import { ${domainCamel} } from "@domain/${domainSnake}";
   import { Filter } from "@domain/filter";
   import { Stats } from "@domain/stats";
@@ -831,11 +832,10 @@ if(mode === 'mysql') {
   const restControllerContent = `
   import { BaseController } from "@common/base_controller";
   import { Express, Request, Response } from "express";
-  import { queryToFilter } from "../util/converter";
+  import { queryToFilter } from "../util/${domainSnake}.converter";
   import { getLogTraceId } from "@logger";
   import { dataToRestResponse } from "@util/converter/global_converter";
   import { errorHandler } from "@util/error/error_handler";
-  import { permissionObaMiddleware } from "@util/middlewares/permission";
   import { globalAuthMiddleware } from "@util/middlewares/global_auth";
   import { I${domainCamel}UseCase } from "@use_case/${domainSnake}.use_case";
   import { ${domainCamel}Service } from "@service/${domainSnake}.service";
@@ -851,11 +851,11 @@ if(mode === 'mysql') {
     }
 
     init(): void {
-      this.app.get(this.prefix, globalAuthMiddleware, permissionObaMiddleware, this.getAll.bind(this));
-      this.app.get(this.prefix + '/:id', globalAuthMiddleware, permissionObaMiddleware, this.getById.bind(this));
-      this.app.post(this.prefix, globalAuthMiddleware, permissionObaMiddleware, this.create.bind(this));
-      this.app.put(this.prefix + '/:id', globalAuthMiddleware, permissionObaMiddleware, this.update.bind(this));
-      this.app.delete(this.prefix + '/:id', globalAuthMiddleware, permissionObaMiddleware, this.delete.bind(this));
+      this.app.get(this.prefix, globalAuthMiddleware, this.getAll.bind(this));
+      this.app.get(this.prefix + '/:id', globalAuthMiddleware, this.getById.bind(this));
+      this.app.post(this.prefix, globalAuthMiddleware, this.create.bind(this));
+      this.app.put(this.prefix + '/:id', globalAuthMiddleware, this.update.bind(this));
+      this.app.delete(this.prefix + '/:id', globalAuthMiddleware, this.delete.bind(this));
     }
 
     async getAll(req: Request, res: Response): Promise<void> {

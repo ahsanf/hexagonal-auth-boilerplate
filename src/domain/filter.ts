@@ -4,4 +4,5 @@ export type Filter = {
   query?: string
   sortBy?: string
   sortOrder?: number | string
+  isActive?: boolean
 }
