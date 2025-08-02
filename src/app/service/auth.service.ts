@@ -3,7 +3,7 @@ import { IUserSqlAdapter } from "@adapter_out/mysql/user/adapter/user.base_adapt
 import { RefreshToken } from "@domain/refresh_token";
 import { Tracing, User, UserLoginResponse } from "@domain/user";
 import { logger } from "@logger";
-import { IAuthUseCase } from "@use_case/auth_use_case";
+import { IAuthUseCase } from "@use_case/auth.use_case";
 import { ApplicationError } from "@util/error/application_error";
 import { HttpError } from "@util/error/type/http_error";
 import Bcrypt from "bcrypt";

@@ -1,5 +1,5 @@
 import { logger } from "@logger";
-import { IUserPgRepository as IUserSqlRepository } from "../repository/user.base_repository";
+import { IUserSqlRepository as IUserSqlRepository } from "../repository/user.base_repository";
 import { UserSqlRepository } from "../repository/user.repository";
 import { IUserSqlAdapter as IUserSqlAdapter } from "./user.base_adapter";
 import { Filter } from "@domain/filter";

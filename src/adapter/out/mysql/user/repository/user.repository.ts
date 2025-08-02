@@ -2,7 +2,7 @@ import { Knex } from "knex";
 import { UserSqlEntity } from "../entity/user_sql.entity";
 import { Filter } from "@domain/filter";
 import { logger } from "@logger";
-import { IUserPgRepository as IUserSqlRepository } from "./user.base_repository";
+import { IUserSqlRepository } from "./user.base_repository";
 import { Stats } from "@domain/stats";
 import { TABLE_NAME } from "@domain/constant";
 import { getMysqlClient } from "@mysql";
