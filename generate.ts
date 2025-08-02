@@ -10,7 +10,7 @@ const args = Object.fromEntries(
     return [key, val];
   })
 );
-//Usages: bun run generate.ts --domain=User --domainFile=user.ts --entityFile=user_sql.ts
+//Usages: bun run generate.ts --domain=User --domainFile=user.ts --entityFile=user_sql.ts --mode=mysql
 const domain = args.domain; // ${domainCamel}
 const domainFile = args.domainFile; // ${domainSnake}.ts
 const entityFile = args.entityFile; // user_${mode}.ts
@@ -46,20 +46,20 @@ const adapterOutDir = `${srcDir}/adapter/out/${mode}/${domainSnake}`;
 const adapterInDir = `${srcDir}/adapter/in/rest/${domainSnake}`;
 const appDir = `${srcDir}/app`;
 
-const utilInDir = path.join(adapterOutDir, 'util');
+const utilOutDir = path.join(adapterOutDir, 'util');
 const entityDir = path.join(adapterOutDir, 'entity');
 const repositoryDir = path.join(adapterOutDir, 'repository');
 const adapterDir = path.join(adapterOutDir, 'adapter');
 
 const controllerDir = path.join(adapterInDir, 'controller');
-const utilOutDir = path.join(adapterInDir, 'util');
+const utilInDir = path.join(adapterInDir, 'util');
 
 const useCaseDir = path.join(appDir, 'port/out');
 const serviceDir = path.join(appDir, 'service');
 const domainDir = path.join(srcDir, 'domain');
 
 
-[utilInDir, entityDir, repositoryDir, adapterDir, controllerDir, utilOutDir, useCaseDir, serviceDir].forEach(dir => {
+[utilOutDir, entityDir, repositoryDir, adapterDir, controllerDir, utilInDir, useCaseDir, serviceDir].forEach(dir => {
   mkdirSync(dir, { recursive: true });
 });
 
@@ -101,7 +101,7 @@ renameSync(domainFile, `${domainDir}/${domainFile}`);
 if(mode === 'mongodb'){
   const converterLines = [
     `import { ${domainCamel} } from "@domain/${domainSnake}";`,
-    `import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}";`,
+    `import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}.entity";`,
     `import { ObjectId } from "mongodb";`,
     ``,
     `export const toDomain = (entity: ${domainCamel}${modeTitle}Entity): ${domainCamel} => {`,
@@ -150,7 +150,7 @@ if(mode === 'mongodb'){
   import { Stats } from "@domain/stats"
   import { Filter } from "@domain/filter"
   import { ObjectId } from "mongodb"
-  import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}"
+  import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}.entity"
 
   export interface I${domainCamel}${modeTitle}Repository {
     getAll(currentPage?: number, perPage?: number, filter?: Filter, traceId?: string): Promise<${domainCamel}${modeTitle}Entity[]>
@@ -166,7 +166,7 @@ if(mode === 'mongodb'){
   import { Filter } from "@domain/filter";
   import { Stats } from "@domain/stats";
   import { Collection, Db, FindOptions, ObjectId } from "mongodb";
-  import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}";
+  import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}.entity";
   import { I${domainCamel}${modeTitle}Repository } from "./base_repository";
   import { logger } from "@logger";
   import { config } from "@config";
@@ -430,14 +430,13 @@ if(mode === 'mongodb'){
   const restControllerContent = `
   import { BaseController } from "@common/base_controller";
   import { Express, Request, Response } from "express";
-  import { queryToFilter } from "../util/converter";
+  import { queryToFilter } from "../util/${domainSnake}.converter";
   import { getLogTraceId } from "@logger";
   import { dataToRestResponse } from "@util/converter/global_converter";
   import { errorHandler } from "@util/error/error_handler";
-  import { permissionObaMiddleware } from "@util/middlewares/permission";
   import { globalAuthMiddleware } from "@util/middlewares/global_auth";
-  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}_${mode}.use_case";
-  import { ${domainCamel}Service } from "@service/${domainSnake}_${mode}.service";
+  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}.use_case";
+  import { ${domainCamel}Service } from "@service/${domainSnake}.service";
 
   export class ${domainCamel}RestController implements BaseController {
     private app: Express;
@@ -450,11 +449,11 @@ if(mode === 'mongodb'){
     }
 
     init(): void {
-      this.app.get(this.prefix, globalAuthMiddleware, permissionObaMiddleware, this.getAll.bind(this));
-      this.app.get(this.prefix + '/:id', globalAuthMiddleware, permissionObaMiddleware, this.getById.bind(this));
-      this.app.post(this.prefix, globalAuthMiddleware, permissionObaMiddleware, this.create.bind(this));
-      this.app.put(this.prefix + '/:id', globalAuthMiddleware, permissionObaMiddleware, this.update.bind(this));
-      this.app.delete(this.prefix + '/:id', globalAuthMiddleware, permissionObaMiddleware, this.delete.bind(this));
+      this.app.get(this.prefix, globalAuthMiddleware, this.getAll.bind(this));
+      this.app.get(this.prefix + '/:id', globalAuthMiddleware, this.getById.bind(this));
+      this.app.post(this.prefix, globalAuthMiddleware, this.create.bind(this));
+      this.app.put(this.prefix + '/:id', globalAuthMiddleware, this.update.bind(this));
+      this.app.delete(this.prefix + '/:id', globalAuthMiddleware, this.delete.bind(this));
     }
 
     async getAll(req: Request, res: Response): Promise<void> {
@@ -466,7 +465,7 @@ if(mode === 'mongodb'){
         res.json(dataToRestResponse(data, stats));
         
       } catch (error) {
-        errorHandler(error, req, res)
+        errorHandler(error, res)
       }
     }
 
@@ -475,7 +474,7 @@ if(mode === 'mongodb'){
         const data = await this.service.getById(req.params.id, getLogTraceId());
         res.json(dataToRestResponse(data));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
 
@@ -484,7 +483,7 @@ if(mode === 'mongodb'){
         const data = await this.service.create(req.body, getLogTraceId());
         res.status(201).json(dataToRestResponse(data));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
     async update(req: Request, res: Response): Promise<void> {
@@ -492,7 +491,7 @@ if(mode === 'mongodb'){
         const data = await this.service.update(req.params.id, req.body, getLogTraceId());
         res.json(dataToRestResponse(data));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
 
@@ -501,7 +500,7 @@ if(mode === 'mongodb'){
         const result = await this.service.delete(req.params.id, getLogTraceId());
         res.json(dataToRestResponse(result));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
   }
@@ -533,9 +532,9 @@ if(mode === 'mongodb'){
   writeFileSync(`${appDir}/port/out/${domainSnake}.use_case.ts`, useCaseContent.trim());
   writeFileSync(`${serviceDir}/${domainSnake}.service.ts`, serviceContent.trim());
 
-  writeFileSync(`${utilInDir}/${domainSnake}.converter.ts`, converterLines.join("\n"));
+  writeFileSync(`${utilOutDir}/${domainSnake}.converter.ts`, converterLines.join("\n"));
   writeFileSync(`${controllerDir}/${domainSnake}.controller.ts`, restControllerContent.trim());
-  writeFileSync(`${utilOutDir}/${domainSnake}_${mode}.converter.ts`, converterInContent.trim());
+  writeFileSync(`${utilInDir}/${domainSnake}_${mode}.converter.ts`, converterInContent.trim());
 
   console.log("✔️ Generation complete.");
 }
@@ -543,7 +542,7 @@ if(mode === 'mongodb'){
 if(mode === 'mysql') {
    const converterLines = [
     `import { ${domainCamel} } from "@domain/${domainSnake}";`,
-    `import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}";`,
+    `import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}.entity";`,
     ``,
     `export const toDomain = (entity: ${domainCamel}${modeTitle}Entity): ${domainCamel} => {`,
     `  return {`,
@@ -586,7 +585,7 @@ if(mode === 'mysql') {
   const baseRepoContent = `
   import { Stats } from "@domain/stats"
   import { Filter } from "@domain/filter"
-  import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}"
+  import { ${domainCamel}${modeTitle}Entity } from "../entity/${domainSnake}_${mode}.entity"
 
   export interface I${domainCamel}${modeTitle}Repository {
     getAll(currentPage?: number, perPage?: number, filter?: Filter, traceId?: string): Promise<{ data: ${domainCamel}${modeTitle}Entity[], stats: Stats}>
@@ -611,7 +610,7 @@ if(mode === 'mysql') {
     private readonly orm: Knex.QueryBuilder<${domainCamel}${modeTitle}Entity, ${domainCamel}${modeTitle}Entity[]>;
     
     constructor() {
-      this.orm = getMysqlClient()<${domainCamel}${modeTitle}Entity>(TABLE_NAME.USERS)
+      this.orm = getMysqlClient()<${domainCamel}${modeTitle}Entity>('CHANGE_THIS_TO_YOUR_TABLE_NAME');
     }
     
     private applyFilters(builder: Knex.QueryBuilder<${domainCamel}${modeTitle}Entity, ${domainCamel}${modeTitle}Entity[]>, filter?: Filter) {
@@ -838,8 +837,8 @@ if(mode === 'mysql') {
   import { errorHandler } from "@util/error/error_handler";
   import { permissionObaMiddleware } from "@util/middlewares/permission";
   import { globalAuthMiddleware } from "@util/middlewares/global_auth";
-  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}_${mode}.use_case";
-  import { ${domainCamel}Service } from "@service/${domainSnake}_${mode}.service";
+  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}.use_case";
+  import { ${domainCamel}Service } from "@service/${domainSnake}.service";
 
   export class ${domainCamel}RestController implements BaseController {
     private app: Express;
@@ -868,7 +867,7 @@ if(mode === 'mysql') {
         res.json(dataToRestResponse(data, stats));
         
       } catch (error) {
-        errorHandler(error, req, res)
+        errorHandler(error, res)
       }
     }
 
@@ -877,7 +876,7 @@ if(mode === 'mysql') {
         const data = await this.service.getById(req.params.id, getLogTraceId());
         res.json(dataToRestResponse(data));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
 
@@ -886,7 +885,7 @@ if(mode === 'mysql') {
         const data = await this.service.create(req.body, getLogTraceId());
         res.status(201).json(dataToRestResponse(data));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
     async update(req: Request, res: Response): Promise<void> {
@@ -894,7 +893,7 @@ if(mode === 'mysql') {
         const data = await this.service.update(req.params.id, req.body, getLogTraceId());
         res.json(dataToRestResponse(data));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
 
@@ -903,7 +902,7 @@ if(mode === 'mysql') {
         const result = await this.service.delete(req.params.id, getLogTraceId());
         res.json(dataToRestResponse(result));
       } catch (error) {
-        errorHandler(error, req, res);
+        errorHandler(error, res);
       }
     }
   }
@@ -935,9 +934,9 @@ if(mode === 'mysql') {
   writeFileSync(`${appDir}/port/out/${domainSnake}.use_case.ts`, useCaseContent.trim());
   writeFileSync(`${serviceDir}/${domainSnake}.service.ts`, serviceContent.trim());
 
-  writeFileSync(`${utilInDir}/${domainSnake}.converter.ts`, converterLines.join("\n"));
+  writeFileSync(`${utilOutDir}/${domainSnake}_${mode}.converter.ts`, converterLines.join("\n"));
   writeFileSync(`${controllerDir}/${domainSnake}.controller.ts`, restControllerContent.trim());
-  writeFileSync(`${utilOutDir}/${domainSnake}_${mode}.converter.ts`, converterInContent.trim());
+  writeFileSync(`${utilInDir}/${domainSnake}.converter.ts`, converterInContent.trim());
 
   console.log("✔️ Generation complete.");
 }

@@ -5,7 +5,7 @@ import { AuthService } from "@service/auth.service"
 import { IAuthUseCase } from "@use_case/auth.use_case"
 import { dataToRestResponse } from "@util/converter/global_converter"
 import { errorHandler } from "@util/error/error_handler"
-import { globalAuthMiddleware } from "@util/middlewares/auth"
+import { globalAuthMiddleware } from "@util/middlewares/global_auth"
 import { Request, Response, Express } from "express"
 
 export class AuthRestController implements BaseController {
