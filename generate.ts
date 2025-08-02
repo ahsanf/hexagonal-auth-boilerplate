@@ -771,12 +771,11 @@ if(mode === 'mysql') {
   import { ${domainCamel} } from "@domain/${domainSnake}"
 
   export interface I${domainCamel}UseCase {
-    getAll(currentPage?: number, perPage?: number, filter?: Filter, traceId?: string): Promise<${domainCamel}[]>
-    getStats(traceId?: string): Promise<Stats>
-    getById(id: string, traceId?: string): Promise<${domainCamel} | null>
+    getAll(currentPage?: number, perPage?: number, filter?: Filter, traceId?: string): Promise<{ data: ${domainCamel}[], stats: Stats }>
+    getById(id: number, traceId?: string): Promise<${domainCamel} | null>
     create(data: ${domainCamel}, traceId?: string): Promise<${domainCamel}>
-    update(id: string, data: Partial<${domainCamel}>, traceId?: string): Promise<Partial<${domainCamel}>>
-    delete(id: string, traceId?: string): Promise<boolean>
+    update(id: number, data: Partial<${domainCamel}>, traceId?: string): Promise<Partial<${domainCamel}> | null>
+    delete(id: number, traceId?: string): Promise<boolean>
   }
   `
 
@@ -787,43 +786,38 @@ if(mode === 'mysql') {
   import { Filter } from "@domain/filter";
   import { Stats } from "@domain/stats";
   import { logger } from "@logger";
-  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}_${mode}.use_case";
+  import { I${domainCamel}UseCase } from "@use_case/${domainSnake}.use_case";
 
   export class ${domainCamel}Service implements I${domainCamel}UseCase {
-    private mongoAdapter: I${domainCamel}${modeTitle}Adapter;
+    private ${mode}Adapter: I${domainCamel}${modeTitle}Adapter;
 
     constructor() {
-      this.mongoAdapter = new ${domainCamel}${modeTitle}Adapter();
+      this.${mode}Adapter = new ${domainCamel}${modeTitle}Adapter();
     }
     
-    async getAll(currentPage?: number, perPage?: number, filter?: Filter, traceId?: string): Promise<${domainCamel}[]> {
+    async getAll(currentPage?: number, perPage?: number, filter?: Filter, traceId?: string): Promise<{ data: ${domainCamel}[], stats: Stats }> {
       logger.info(this.getAll.name, ${domainCamel}Service.name, traceId);
-      return await this.mongoAdapter.getAll(currentPage, perPage, filter, traceId);
+      return await this.${mode}Adapter.getAll(currentPage, perPage, filter, traceId);
     }
     
-    async getStats(traceId?: string): Promise<Stats> {
-      logger.info(this.getStats.name, ${domainCamel}Service.name, traceId);
-      return await this.mongoAdapter.getStats(traceId);
-    }
-    
-    async getById(id: string, traceId?: string): Promise<${domainCamel} | null> {
+    async getById(id: number, traceId?: string): Promise<${domainCamel} | null> {
       logger.info(this.getById.name, ${domainCamel}Service.name, traceId);
-      return await this.mongoAdapter.getById(id, traceId);
+      return await this.${mode}Adapter.getById(id, traceId);
     }
     
     async create(data: ${domainCamel}, traceId?: string): Promise<${domainCamel}> {
       logger.info(this.create.name, ${domainCamel}Service.name, traceId);
-      return await this.mongoAdapter.create(data, traceId);
+      return await this.${mode}Adapter.create(data, traceId);
     }
-    
-    async update(id: string, data: Partial<${domainCamel}>, traceId?: string): Promise<Partial<${domainCamel}>> {
+
+    async update(id: number, data: Partial<${domainCamel}>, traceId?: string): Promise<Partial<${domainCamel}> | null> {
       logger.info(this.update.name, ${domainCamel}Service.name, traceId);
-      return await this.mongoAdapter.update(id, data, traceId);
+      return await this.${mode}Adapter.update(id, data, traceId);
     }
-    
-    async delete(id: string, traceId?: string): Promise<boolean> {
+
+    async delete(id: number, traceId?: string): Promise<boolean> {
       logger.info(this.delete.name, ${domainCamel}Service.name, traceId);
-      return await this.mongoAdapter.delete(id, traceId);
+      return await this.${mode}Adapter.delete(id, traceId);
     }
 
   }
@@ -873,7 +867,7 @@ if(mode === 'mysql') {
 
     async getById(req: Request, res: Response): Promise<void> {
       try {
-        const data = await this.service.getById(req.params.id, getLogTraceId());
+        const data = await this.service.getById(parseInt(req.params.id.toString()), getLogTraceId());
         res.json(dataToRestResponse(data));
       } catch (error) {
         errorHandler(error, res);
@@ -890,7 +884,7 @@ if(mode === 'mysql') {
     }
     async update(req: Request, res: Response): Promise<void> {
       try {
-        const data = await this.service.update(req.params.id, req.body, getLogTraceId());
+        const data = await this.service.update(parseInt(req.params.id.toString()), req.body, getLogTraceId());
         res.json(dataToRestResponse(data));
       } catch (error) {
         errorHandler(error, res);
@@ -899,7 +893,7 @@ if(mode === 'mysql') {
 
     async delete(req: Request, res: Response): Promise<void> {
       try {
-        const result = await this.service.delete(req.params.id, getLogTraceId());
+        const result = await this.service.delete(parseInt(req.params.id.toString()), getLogTraceId());
         res.json(dataToRestResponse(result));
       } catch (error) {
         errorHandler(error, res);
