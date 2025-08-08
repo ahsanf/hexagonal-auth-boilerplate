@@ -29,7 +29,9 @@ export class AuthRestController implements BaseController {
 
     this.app.post("/auth/verify-otp", this.handleVerifyOtp.bind(this))
     this.app.post("/auth/resend-otp", this.handleResendOtp.bind(this))
-   
+
+    this.app.post("/auth/forgot-password", this.handleForgotPassword.bind(this))
+    this.app.post("/auth/reset-password", this.handleResetPassword.bind(this))
     this.app.post("/auth/refresh-access-token", refreshTokenMiddleware, this.handleRefreshAccessToken.bind(this))
   }
 
@@ -154,6 +156,30 @@ export class AuthRestController implements BaseController {
       }
       const result = await this.authService.refreshAccessToken(refreshToken.token, tracing, getLogTraceId())
       res.status(200).json(dataToRestResponse(result))
+    } catch (error) {
+      errorHandler(error, res)
+    }
+  }
+
+
+  private async handleForgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body
+      const traceId = getLogTraceId()
+      const result = await this.authService.forgotPassword(email, traceId)  
+      res.status(200).json(dataToRestResponse(result))
+    } catch (error) {
+      errorHandler(error, res)
+    }
+  }
+
+  private async handleResetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { otpRequest, otpSignature, newPassword } = req.body
+      const traceId = getLogTraceId()
+      await this.authService.resetPassword(otpRequest, otpSignature, newPassword, traceId)
+      
+      res.status(204).send(dataToRestResponse(null))
     } catch (error) {
       errorHandler(error, res)
     }

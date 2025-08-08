@@ -336,6 +336,52 @@ export class AuthService implements IAuthUseCase {
     return `OTP verified`;
   }
 
+  async forgotPassword(email: string, traceId?: string): Promise<{otpSignature: string}> {
+    logger.info(this.forgotPassword.name, AuthService.name, traceId);
+    if (!email) {
+      throw new ApplicationError(HttpError('Email is required').BAD_REQUEST);
+    } 
+
+    const user = await this.userSqlAdapter.getByUsernameOrEmail(email, traceId);
+
+    if (!user) {
+      throw new ApplicationError(HttpError('User not found').UNPROCESSABLE_ENTITY);
+    }
+
+    const otpCode = await this.handleOtp(user.id, user.name, user.email, false, traceId);
+    return { otpSignature: otpCode };
+  }
+
+  async resetPassword(otpSignature: string, newPassword: string, traceId?: string): Promise<void> {
+    logger.info(this.resetPassword.name, AuthService.name, traceId);
+    const otpData = await decryptData(otpSignature);
+    const [userId, otp, fullName, email] = otpData.split(':');
+
+    if (!userId || !fullName || !email) {
+      throw new ApplicationError(HttpError('Invalid OTP signature').UNPROCESSABLE_ENTITY);
+    }
+
+    const user = await this.userSqlAdapter.getById(parseInt(userId), traceId);
+
+    if (!user) {
+      throw new ApplicationError(HttpError('User not found').UNPROCESSABLE_ENTITY);
+    }
+
+    if (Bcrypt.compareSync(newPassword, user.password)) {
+      throw new ApplicationError(HttpError('New password cannot be the same as the old password').UNPROCESSABLE_ENTITY);
+    }
+
+    const hashedPassword = await Bcrypt.hash(newPassword, 10);
+
+    await this.userSqlAdapter.update(parseInt(userId), {
+      password: hashedPassword,
+      lastPasswordChange: new Date(),
+      updatedAt: new Date(),
+    }, traceId);
+
+    await delCache(`OTP:${userId}`);
+  }
+
   async getMe(id: number, traceId?: string): Promise<UserLoginResponse> { 
     logger.info(this.getMe.name, AuthService.name, traceId);
     const user = await this.userSqlAdapter.getById(id, traceId);
