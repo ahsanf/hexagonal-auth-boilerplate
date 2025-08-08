@@ -10,6 +10,7 @@ import { initMysql } from './src/util/mysql/mysql';
 import { initMongo } from './src/util/mongodb/mongodb';
 
 import { initRabbitMQ } from './src/util/rabbitmq/rabbitmq';
+import { initRedis } from './src/util/redis/redis';
 import { config } from './src/config/config';
 import { AuthRestController } from './src/adapter/in/rest/auth/controller/auth.controller';
 
@@ -32,6 +33,7 @@ initMysql()
 // initMongo()
 // initRabbitMQ()
 // initPostgres()
+initRedis()
 
 new AuthRestController(app).init()
 // const domainController = new DomainController(app, apiVersion)

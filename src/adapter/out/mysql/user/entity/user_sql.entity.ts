@@ -1,6 +1,7 @@
 export type UserSqlEntity = {
   id: number
   name: string
+  username?: string
   email: string
   password: string
   phone?: string
@@ -8,7 +9,7 @@ export type UserSqlEntity = {
   lang?: string
   image_url?: string
   is_active?: boolean
-  roles?: string[]
+  roles?: string
   last_login?: Date
   last_password_change?: Date
   email_verified?: boolean

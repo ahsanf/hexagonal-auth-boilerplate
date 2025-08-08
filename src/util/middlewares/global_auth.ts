@@ -3,11 +3,12 @@ import { ApplicationError } from '../error/application_error';
 import { HttpError } from '../error/type/http_error';
 import { formatError } from '../error/format_error';
 import { config } from '@config';
+import { decryptData } from '@util/encrypt/encryption';
 
 const secretKey: Secret = config.app.appSalt;
 let applicationError: ApplicationError
 
-export const globalAuthMiddleware =  (req: any, res: any, next: any) => {
+export const globalAuthMiddleware =  async (req: any, res: any, next: any) => {
   (async () => {
     try {
       const token: string = req.cookies.accessToken !== undefined ? req.cookies.accessToken.token : req.query.accessToken?.toString();
@@ -16,14 +17,25 @@ export const globalAuthMiddleware =  (req: any, res: any, next: any) => {
         res.status(403).json(formatError(applicationError));
         return
       } else {
-        jwt.verify(token, secretKey, (error, decoded) => {
+        jwt.verify(token, secretKey, async (error, decoded) => {
           if (error) {
             applicationError = new ApplicationError(HttpError('Invalid access token').UNAUTHORIZED);
             applicationError.message = error.message;
             res.status(401).json(formatError(applicationError));
             return
           } else {
-            res.locals.user = decoded;
+            if (!decoded || typeof decoded !== 'object' || !decoded.id || !decoded.email) {
+              applicationError = new ApplicationError(HttpError('Invalid access token').UNAUTHORIZED);
+              res.status(401).json(formatError(applicationError));
+              return
+            }
+            res.locals.user = {
+              id: await decryptData(decoded.id),
+              email: await decryptData(decoded.email),
+              roles: decoded.roles,
+              exp: (decoded as any).exp,
+              iat: (decoded as any).iat
+            };
             next();
           }
         });

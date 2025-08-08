@@ -6,12 +6,14 @@ import { IUserSqlRepository } from "./user.base_repository";
 import { Stats } from "@domain/stats";
 import { TABLE_NAME } from "@domain/constant";
 import { getMysqlClient } from "@mysql";
+import { removeUndefinedField } from "@util/converter/global_converter";
 
 export class UserSqlRepository implements IUserSqlRepository { 
   private readonly orm: Knex.QueryBuilder<UserSqlEntity, UserSqlEntity[]>;
+  private readonly tableName: string = TABLE_NAME.USERS;
   
   constructor() {
-    this.orm = getMysqlClient()<UserSqlEntity>(TABLE_NAME.USERS)
+    this.orm = getMysqlClient()<UserSqlEntity>(this.tableName)
   }
   
   private applyFilters(builder: Knex.QueryBuilder<UserSqlEntity, UserSqlEntity[]>, filter?: Filter) {
@@ -53,13 +55,14 @@ export class UserSqlRepository implements IUserSqlRepository {
   async getByUsernameOrEmail(usernameOrEmail:  string, traceId?: string): Promise<UserSqlEntity | null> {
     logger.info(this.getByUsernameOrEmail.name, UserSqlRepository.name, traceId);
   
-    return this.orm
+    const result = await this.orm
       .clone()
       .where((builder) => {
         builder.where("username", usernameOrEmail).orWhere("email", usernameOrEmail);
       })
       .first()
       .then((result) => result ?? null);
+    return result;
   }
 
   async getById(id: number, traceId?: string): Promise<UserSqlEntity | null> {
@@ -72,37 +75,74 @@ export class UserSqlRepository implements IUserSqlRepository {
       .then((result) => result ?? null);
   }
   
-  async create(data: UserSqlEntity, traceId?: string): Promise<UserSqlEntity> {
-    logger.info(this.create.name, UserSqlRepository.name, traceId);
+async create(data: UserSqlEntity, traceId?: string): Promise<UserSqlEntity> {
+  logger.info(this.create.name, UserSqlRepository.name, traceId);
+
+  const connection = await this.orm.client.acquireConnection();
   
-    const [created] = await this.orm
-      .clone()
-      .insert(data)
-      .returning("*");
-  
+  try {
+    const promiseConnection = connection.promise();
+    
+    const [insertResult] = await promiseConnection.query(
+      'INSERT INTO ?? SET ?', 
+      [this.tableName, data]
+    );
+    
+    const [rows] = await promiseConnection.query(
+      'SELECT * FROM ?? WHERE id = ?', 
+      [this.tableName, insertResult.insertId]
+    );
+    
+    const created = rows[0];
+    
+    if (!created) {
+      throw new Error('Failed to create user');
+    }
+
     return created;
+  } finally {
+    this.orm.client.releaseConnection(connection);
   }
+}
   
   async update(id: number, data: Partial<UserSqlEntity>, traceId?: string): Promise<UserSqlEntity | null> {
     logger.info(this.update.name, UserSqlRepository.name, traceId);
-  
-    const [updated] = await this.orm
-      .clone()
-      .where({ id })
-      .update(data)
-      .returning("*");
-  
-    return updated ?? null;
+    const connection = await this.orm.client.acquireConnection();
+
+    try {
+      const promiseConnection = connection.promise();
+
+      await promiseConnection.query(
+        'UPDATE ?? SET ? WHERE id = ?', 
+        [this.tableName, removeUndefinedField(data), id]
+      );
+      
+      const [updated] = await promiseConnection.query(
+        'SELECT * FROM ?? WHERE id = ?', 
+        [this.tableName, id]
+      );
+      
+      return updated;
+    } finally {
+      this.orm.client.releaseConnection(connection);
+    }
   }
   
   async delete(id: number, traceId?: string): Promise<boolean> {
     logger.info(this.delete.name, UserSqlRepository.name, traceId);
   
-    const deletedCount = await this.orm
-      .clone()
-      .where({ id })
-      .delete();
-  
-    return deletedCount > 0;
+    const connection = await this.orm.client.acquireConnection();
+    const promiseConnection = connection.promise();
+
+    try {
+      const result = await promiseConnection.query(
+        'DELETE FROM ?? WHERE id = ?', 
+        [this.tableName, id]
+      );
+      
+      return result.affectedRows > 0;
+    } finally {
+      this.orm.client.releaseConnection(connection);
+    }
   }
 }

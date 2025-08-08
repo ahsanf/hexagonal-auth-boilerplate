@@ -5,6 +5,7 @@ export const toDomain = (entity: UserSqlEntity): User => {
   return {
     id: entity.id,
     name: entity.name,
+    username: entity.username,
     email: entity.email,
     password: entity.password,
     phone: entity.phone,
@@ -27,6 +28,7 @@ export const toEntity = (domain: User): UserSqlEntity => {
   return {
     id: domain.id,
     name: domain.name,
+    username: domain.username,
     email: domain.email,
     password: domain.password,
     phone: domain.phone,
@@ -34,7 +36,7 @@ export const toEntity = (domain: User): UserSqlEntity => {
     lang: domain.lang,
     image_url: domain.imageUrl,
     is_active: domain.isActive,
-    roles: domain.roles ? domain.roles : [],
+    roles: domain.roles ? JSON.stringify(domain.roles) : undefined,
     last_login: domain.lastLogin,
     last_password_change: domain.lastPasswordChange,
     email_verified: domain.emailVerified,
@@ -49,6 +51,7 @@ export const toPartialDomain = (entity: Partial<UserSqlEntity>): Partial<User> =
   return {
     id: entity.id,
     name: entity.name,
+    username: entity.username,
     email: entity.email,
     password: entity.password,
     phone: entity.phone,
@@ -71,6 +74,7 @@ export const toPartialEntity = (domain: Partial<User>): Partial<UserSqlEntity> =
   return {
     id: domain.id,
     name: domain.name,
+    username: domain.username,
     email: domain.email,
     password: domain.password,
     phone: domain.phone,
@@ -78,7 +82,7 @@ export const toPartialEntity = (domain: Partial<User>): Partial<UserSqlEntity> =
     lang: domain.lang,
     image_url: domain.imageUrl,
     is_active: domain.isActive,
-    roles: domain.roles ? domain.roles : [],
+    roles: domain.roles ? JSON.stringify(domain.roles) : undefined,
     last_login: domain.lastLogin,
     last_password_change: domain.lastPasswordChange,
     email_verified: domain.emailVerified,

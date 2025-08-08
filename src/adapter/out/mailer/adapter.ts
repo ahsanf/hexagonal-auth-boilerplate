@@ -19,6 +19,7 @@ export class MailAdapter {
   }
 
   async send (mailRequest:MailRequest): Promise<string> {
+    logger.info(this.send.name, MailAdapter.name)
     try{
       let info = await this.transporter.sendMail({
         from: mailRequest.from,

@@ -14,9 +14,10 @@ import { getMysqlClient } from "@mysql";
 
 export class RefreshTokenSqlRepository implements IRefreshTokenSqlRepository { 
   private readonly orm: Knex.QueryBuilder<RefreshTokenSqlEntity, RefreshTokenSqlEntity[]>;
-  
+  private readonly tableName: string = TABLE_NAME.REFRESH_TOKENS;
+
   constructor() {
-    this.orm = getMysqlClient()<RefreshTokenSqlEntity>(TABLE_NAME.REFRESH_TOKENS)
+    this.orm = getMysqlClient()<RefreshTokenSqlEntity>(this.tableName)
   }
   
   private applyFilters(builder: Knex.QueryBuilder<RefreshTokenSqlEntity, RefreshTokenSqlEntity[]>, filter?: Filter) {
@@ -88,24 +89,44 @@ export class RefreshTokenSqlRepository implements IRefreshTokenSqlRepository {
   async create(data: RefreshTokenSqlEntity, traceId?: string): Promise<RefreshTokenSqlEntity> {
     logger.info(this.create.name, RefreshTokenSqlRepository.name, traceId);
   
-    const [created] = await this.orm
-      .clone()
-      .insert(data)
-      .returning("*");
-  
-    return created;
+    const connection = await this.orm.client.acquireConnection();
+    
+    try {
+      const promiseConnection = connection.promise();
+      
+      const [insertResult] = await promiseConnection.query(
+        'INSERT INTO ?? SET ?', 
+        [this.tableName, data]
+      );
+      
+      const [rows] = await promiseConnection.query(
+        'SELECT * FROM ?? WHERE id = ?', 
+        [this.tableName, insertResult.insertId]
+      );
+        [insertResult.insertId]
+      
+      
+      const created = rows[0];
+      
+      if (!created) {
+        throw new Error('Failed to create user');
+      }
+
+      return created;
+    } finally {
+      this.orm.client.releaseConnection(connection);
+    }
   }
   
   async update(id: number, data: Partial<RefreshTokenSqlEntity>, traceId?: string): Promise<RefreshTokenSqlEntity | null> {
     logger.info(this.update.name, RefreshTokenSqlRepository.name, traceId);
   
-    const [updated] = await this.orm
+    await this.orm
       .clone()
       .where({ id })
-      .update(data)
-      .returning("*");
-  
-    return updated ?? null;
+      .update(data);
+
+    return this.getById(id, traceId);
   }
   
   async delete(id: number, traceId?: string): Promise<boolean> {

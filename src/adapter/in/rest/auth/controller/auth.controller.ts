@@ -1,5 +1,6 @@
 import { BaseController } from "@common/base_controller"
 import { config } from "@config"
+import { Tracing } from "@domain/user"
 import { getLogTraceId } from "@logger"
 import { AuthService } from "@service/auth.service"
 import { IAuthUseCase } from "@use_case/auth.use_case"
@@ -7,6 +8,7 @@ import { dataToRestResponse } from "@util/converter/global_converter"
 import { errorHandler } from "@util/error/error_handler"
 import { globalAuthMiddleware } from "@util/middlewares/global_auth"
 import { Request, Response, Express } from "express"
+import { refreshTokenMiddleware } from "../middleware/refresh_token.middleware"
 
 export class AuthRestController implements BaseController {
   private app: Express
@@ -23,18 +25,23 @@ export class AuthRestController implements BaseController {
 
     this.app.post("/auth/logout", globalAuthMiddleware,  this.handleLogout.bind(this))
     this.app.put("/auth/change-password", globalAuthMiddleware, this.handleChangePassword.bind(this))
+    this.app.get("/auth/me", globalAuthMiddleware, this.handleGetMe.bind(this))
 
-    this.app.post("/auth/verify-otp", globalAuthMiddleware, this.handleVerifyOtp.bind(this))
-    this.app.post("/auth/refresh-access-token", globalAuthMiddleware, this.handleRefreshAccessToken.bind(this))
+    this.app.post("/auth/verify-otp", this.handleVerifyOtp.bind(this))
+    this.app.post("/auth/resend-otp", this.handleResendOtp.bind(this))
+   
+    this.app.post("/auth/refresh-access-token", refreshTokenMiddleware, this.handleRefreshAccessToken.bind(this))
   }
 
   private async handleLogin(req: Request, res: Response): Promise<void> {
     try {
       const data = req.body
-      const tracing = {
+      const tracing: Tracing = {
         userAgent: req.headers["user-agent"] || "",
         ipAddress: req.ip,
+        macAddress: req.headers["mac-address"] as string || ""
       }
+
       const result = await this.authService.login(data, tracing, getLogTraceId())
       const response = dataToRestResponse(result)
       res
@@ -124,6 +131,18 @@ export class AuthRestController implements BaseController {
     }
   }
 
+  private async handleResendOtp(req: Request, res: Response): Promise<void> {
+    try {
+      const { otpSignature } = req.body
+      const traceId = getLogTraceId()
+      const result = await this.authService.resendOtp(otpSignature, traceId)
+      
+      res.status(200).json(dataToRestResponse(result))
+    } catch (error) {
+      errorHandler(error, res)
+    }
+  }
+
 
   private async handleRefreshAccessToken(req: Request, res: Response): Promise<void> {
     try {
@@ -131,8 +150,19 @@ export class AuthRestController implements BaseController {
       const tracing = {
         userAgent: req.headers["user-agent"] || "",
         ipAddress: req.ip,
+        macAddress: req.headers["mac-address"] as string || ""
       }
-      const result = await this.authService.refreshAccessToken(refreshToken, tracing, getLogTraceId())
+      const result = await this.authService.refreshAccessToken(refreshToken.token, tracing, getLogTraceId())
+      res.status(200).json(dataToRestResponse(result))
+    } catch (error) {
+      errorHandler(error, res)
+    }
+  }
+
+  private async handleGetMe(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = res.locals.user.id
+      const result = await this.authService.getMe(userId, getLogTraceId())
       res.status(200).json(dataToRestResponse(result))
     } catch (error) {
       errorHandler(error, res)

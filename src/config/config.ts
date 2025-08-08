@@ -24,13 +24,24 @@ const SERVER_CONFIG = {
 };
 
 const MYSQL_CONFIG = {
-  client: 'mysql',
+  client: 'mysql2',
   connection: {
     host: getEnv('MYSQL_DB_HOST'),
     user: getEnv('MYSQL_DB_USERNAME'),
     password: getEnv('MYSQL_DB_PASSWORD'),
     database: getEnv('MYSQL_DB_NAME'),
   },
+  pool: {
+    min: 2,
+    max: 10,
+    acquireTimeoutMillis: 30000,
+    createTimeoutMillis: 30000,
+    destroyTimeoutMillis: 5000,
+    idleTimeoutMillis: 30000,
+    reapIntervalMillis: 1000,
+    createRetryIntervalMillis: 200,
+  },
+  acquireConnectionTimeout: 30000,
   migrations: {
     tableName: 'knex_migrations',
     extension: 'ts',

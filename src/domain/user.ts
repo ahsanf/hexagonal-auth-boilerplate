@@ -9,7 +9,7 @@ export type User = {
   lang?: string
   imageUrl?: string
   isActive?: boolean
-  roles?: string[]
+  roles?: string[] | string
   lastLogin?: Date
   lastPasswordChange?: Date
   emailVerified?: boolean
@@ -27,7 +27,7 @@ export type Tracing = {
 
 export type UserLoginResponse = {
   user:{
-    id: number,
+    username?: string,
     name: string,
     email: string,
     phone?: string,
@@ -35,7 +35,7 @@ export type UserLoginResponse = {
     lang?: string,
     imageUrl?: string,
     isActive?: boolean,
-    roles?: string[],
+    roles?: string[] | string,
     lastLogin?: Date,
   },
   refreshToken?: TokenPayload,

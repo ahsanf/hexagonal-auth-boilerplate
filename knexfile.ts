@@ -3,13 +3,12 @@ import type { Knex } from "knex";
 
 const config: { [key: string]: Knex.Config } = {
   development: {
-    client: 'pg',
+    client: 'mysql2',
     connection: {
-      host: appConfig.database.pg.connection.host,
-      user: appConfig.database.pg.connection.user,
-      password: appConfig.database.pg.connection.password,
-      database: appConfig.database.pg.connection.database,
-      port: appConfig.database.pg.connection.port || 5432,
+      host: appConfig.database.mysql.connection.host,
+      user: appConfig.database.mysql.connection.user,
+      password: appConfig.database.mysql.connection.password,
+      database: appConfig.database.mysql.connection.database,
     },
     pool: {
       min: 2,
@@ -20,7 +19,8 @@ const config: { [key: string]: Knex.Config } = {
     },
     migrations: {
       directory: './src/migrations',
-      tableName: "knex_migrations"
+      tableName: "knex_migrations",
+      extension: 'ts',
     }
   },
 

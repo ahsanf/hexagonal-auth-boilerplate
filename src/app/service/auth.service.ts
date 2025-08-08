@@ -36,17 +36,27 @@ export class AuthService implements IAuthUseCase {
   async login(data: Partial<User>, tracing: Tracing, traceId?: string): Promise<UserLoginResponse> {
     logger.info(this.login.name, AuthService.name, traceId);
     
-    if((!data.email || !data.username ) || !data.password) {
+    if(!data.email && !data.password) {
       throw new ApplicationError(HttpError('User/password required').BAD_REQUEST)
     }
 
-    const user = await this.userSqlAdapter.getByUsernameOrEmail(data.username || data.email, traceId);
+    if(!data.username && !data.password) {
+      throw new ApplicationError(HttpError('User/password required').BAD_REQUEST)
+    }
 
+    const usernameOrEmail = data.username || data.email;
+
+    if (!usernameOrEmail) {
+      throw new ApplicationError(HttpError('Username or email required').BAD_REQUEST)
+    }
+
+    const user = await this.userSqlAdapter.getByUsernameOrEmail(usernameOrEmail, traceId);
+    
     if (!user) {
       throw new ApplicationError(HttpError('User not found').UNPROCESSABLE_ENTITY);
     }
 
-    if(!Bcrypt.compare(data.password, user.password)){
+    if(!data.password || !Bcrypt.compare(data.password, user.password)){
       throw new ApplicationError(HttpError('Invalid credentials').UNAUTHORIZED);
     }
 
@@ -57,7 +67,7 @@ export class AuthService implements IAuthUseCase {
     const accessToken = await generateAccessToken({
       id: user.id.toString(),
       email: user.email,
-      roles: user.roles,
+      roles: user.roles as string[],
     });
 
 
@@ -68,7 +78,18 @@ export class AuthService implements IAuthUseCase {
     }, traceId);
 
     return {
-      user: user,
+      user: {
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        lang: user.lang,
+        imageUrl: user.imageUrl,
+        isActive: user.isActive,
+        roles: user.roles as string[],
+        lastLogin: user.lastLogin,
+      },
       accessToken: {
         token: accessToken,
         expiresIn: moment().add(24, 'hours').toDate(),
@@ -81,7 +102,7 @@ export class AuthService implements IAuthUseCase {
   
   }
   
-  async register(data: Partial<User>, tracing: Tracing, traceId?: string): Promise<{otpCode: string}> {
+  async register(data: Partial<User>, tracing: Tracing, traceId?: string): Promise<{otpSignature: string}> {
     logger.info(this.register.name, AuthService.name, traceId);
 
     if(!data.email || !data.password || !data.name) {
@@ -114,8 +135,9 @@ export class AuthService implements IAuthUseCase {
     };
 
     const insertedUser = await this.userSqlAdapter.create(newUser, traceId);
-    const otpCode = await this.handleOtp(insertedUser.id, insertedUser.name, insertedUser.email, traceId);
-    return { otpCode: otpCode}
+    const otpCode = await this.handleOtp(insertedUser.id, insertedUser.name, insertedUser.email, false, traceId);
+
+    return { otpSignature: otpCode}
 
   }
   
@@ -133,7 +155,7 @@ export class AuthService implements IAuthUseCase {
   async refreshAccessToken(refreshToken: string, tracing: Tracing, traceId?: string): Promise<UserLoginResponse> {
     logger.info(this.refreshAccessToken.name, AuthService.name, traceId);
     let refreshTokenData = await this.refreshTokenSqlAdapter.getByToken(refreshToken, traceId);
-
+    
     if (!refreshTokenData) {
       throw new ApplicationError(HttpError('Invalid refresh token').UNAUTHORIZED);
     }
@@ -149,11 +171,22 @@ export class AuthService implements IAuthUseCase {
     const accessToken = await generateAccessToken({
       id: user.id.toString(),
       email: user.email,
-      roles: user.roles,
+      roles: user.roles as string[],
     });
 
     return {
-      user: user,
+      user: {
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        lang: user.lang,
+        imageUrl: user.imageUrl,
+        isActive: user.isActive,
+        roles: user.roles as string[],
+        lastLogin: user.lastLogin,
+      },
       accessToken: {
         token: accessToken,
         expiresIn: moment().add(24, 'hours').toDate(),
@@ -183,7 +216,6 @@ export class AuthService implements IAuthUseCase {
 
     const newPassword = await Bcrypt.hash(data.newPassword, 10)
 
-
     await this.userSqlAdapter.update(id, {
       password: newPassword,
       lastPasswordChange: new Date(),
@@ -195,7 +227,7 @@ export class AuthService implements IAuthUseCase {
   async handleRefreshToken(userId: number, tracing: Tracing, traceId?: string): Promise<RefreshToken> {
       const token = await this.refreshTokenSqlAdapter.getByUserId(userId, traceId);
       if (token && token.id) {
-        if (moment(token.expiredAt).isAfter(moment())) {
+        if (moment(token.expiredAt).isBefore(moment())) {
             let newRefreshToken = uuidv4();
             await this.refreshTokenSqlAdapter.update(token.id, {
               token: newRefreshToken,
@@ -225,7 +257,27 @@ export class AuthService implements IAuthUseCase {
       }
     }
 
-  async handleOtp(userId: number, fullName: string, email: string, traceId?: string): Promise<string> {
+  async resendOtp(otpSignature: string, traceId?: string): Promise<{otpRequest: string}> {
+    logger.info(this.resendOtp.name, AuthService.name, traceId);
+    const otpData = await decryptData(otpSignature);
+    const [userId, otp, fullName, email] = otpData.split(':');
+
+    if (!userId || !fullName || !email) {
+      throw new ApplicationError(HttpError('Invalid OTP signature').UNPROCESSABLE_ENTITY);
+    }
+
+    const user = await this.userSqlAdapter.getById(parseInt(userId), traceId);
+
+    if (!user) {
+      throw new ApplicationError(HttpError('User not found').UNPROCESSABLE_ENTITY);
+    }
+
+    const signature = await this.handleOtp(parseInt(userId), fullName, email, true, traceId);
+
+    return { otpRequest: signature }
+  }
+
+  async handleOtp(userId: number, fullName: string, email: string, isResend: boolean, traceId?: string): Promise<string> {
     logger.info(this.handleOtp.name, AuthService.name, traceId);
 
     const otp = otpGenerator.generate(6, {
@@ -233,7 +285,12 @@ export class AuthService implements IAuthUseCase {
       lowerCaseAlphabets: false,
       specialChars: false, });
 
-    const otpCode = await encryptData(`${userId}:${otp}`);
+    const otpCode = await encryptData(`${userId}:${otp}:${fullName}:${email}`);
+
+    if(isResend == true)  {
+      await delCache(`OTP:${userId}`);
+    }
+
     await cacheData(`OTP:${userId}`, otpCode, 5 * 60);
 
     const mailContent = { fullName: fullName, otpCode: otp }
@@ -278,5 +335,29 @@ export class AuthService implements IAuthUseCase {
 
     return `OTP verified`;
   }
-    
+
+  async getMe(id: number, traceId?: string): Promise<UserLoginResponse> { 
+    logger.info(this.getMe.name, AuthService.name, traceId);
+    const user = await this.userSqlAdapter.getById(id, traceId);
+
+    if (!user) {
+      throw new ApplicationError(HttpError('User not found').UNPROCESSABLE_ENTITY);
+    }
+
+    return {
+      user: {
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        lang: user.lang,
+        imageUrl: user.imageUrl,
+        isActive: user.isActive,
+        roles: user.roles as string[],
+        lastLogin: user.lastLogin,
+      }
+    };
+  }
+
 }

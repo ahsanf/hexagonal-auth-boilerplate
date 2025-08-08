@@ -4,6 +4,7 @@ export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('users', (table) => {
     table.increments('id').primary();
     table.string('name').notNullable();
+    table.string('username').notNullable();
     table.string('email').notNullable().unique();
     table.string('password').notNullable();
     table.string('phone').nullable();
@@ -36,6 +37,7 @@ export async function up(knex: Knex): Promise<void> {
     table.timestamp('updated_at').defaultTo(knex.fn.now()).nullable();
     table.string('user_agent').nullable();
     table.string('ip_address').nullable();
+    table.string('mac_address').nullable();
   });
 }
 
