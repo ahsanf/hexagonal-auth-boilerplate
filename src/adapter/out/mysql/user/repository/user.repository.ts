@@ -7,6 +7,8 @@ import { Stats } from "@domain/stats";
 import { TABLE_NAME } from "@domain/constant";
 import { getMysqlClient } from "@mysql";
 import { removeUndefinedField } from "@util/converter/global_converter";
+import { ApplicationError } from "@util/error/application_error";
+import { HttpError } from "@util/error/type/http_error";
 
 export class UserSqlRepository implements IUserSqlRepository { 
   private readonly orm: Knex.QueryBuilder<UserSqlEntity, UserSqlEntity[]>;
@@ -20,7 +22,6 @@ export class UserSqlRepository implements IUserSqlRepository {
     if (filter?.query) {
       builder.whereILike("name", `%${filter.query}%`);
     }
-
   }
   
   async getAll(currentPage: number = 1, perPage: number = 10, filter?: Filter, traceId?: string):  Promise<{ data: UserSqlEntity[], stats: Stats }>{
@@ -28,7 +29,9 @@ export class UserSqlRepository implements IUserSqlRepository {
     
     const offset = (currentPage - 1) * perPage;
 
-    const baseQuery = this.orm.clone().where((builder) => {
+    const baseQuery = this.orm.clone().select(
+      filter?.fields ? filter.fields : "*"
+    ).where((builder) => {
       this.applyFilters(builder, filter);
     });
 
@@ -96,7 +99,7 @@ async create(data: UserSqlEntity, traceId?: string): Promise<UserSqlEntity> {
     const created = rows[0];
     
     if (!created) {
-      throw new Error('Failed to create user');
+      throw new ApplicationError(HttpError('Failed to insert data').INTERNAL_SERVER_ERROR)
     }
 
     return created;

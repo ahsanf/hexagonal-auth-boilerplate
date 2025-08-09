@@ -5,4 +5,5 @@ export type Filter = {
   sortBy?: string
   sortOrder?: number | string
   isActive?: boolean
+  fields?: string[]
 }

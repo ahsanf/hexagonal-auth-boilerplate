@@ -606,12 +606,16 @@ if(mode === 'mysql') {
   import { Stats } from "@domain/stats";
   import { TABLE_NAME } from "@domain/constant";
   import { getMysqlClient } from "@mysql";
+  import { removeUndefinedField } from "@util/converter/global_converter";
+  import { ApplicationError } from "@util/error/application_error";
+  import { HttpError } from "@util/error/type/http_error";
 
   export class ${domainCamel}${modeTitle}Repository implements I${domainCamel}${modeTitle}Repository { 
     private readonly orm: Knex.QueryBuilder<${domainCamel}${modeTitle}Entity, ${domainCamel}${modeTitle}Entity[]>;
-    
+    private readonly tableName: string = ''; // Change this to your actual table name
+
     constructor() {
-      this.orm = getMysqlClient()<${domainCamel}${modeTitle}Entity>('CHANGE_THIS_TO_YOUR_TABLE_NAME');
+      this.orm = getMysqlClient()<${domainCamel}${modeTitle}Entity>(this.tableName);
     }
     
     private applyFilters(builder: Knex.QueryBuilder<${domainCamel}${modeTitle}Entity, ${domainCamel}${modeTitle}Entity[]>, filter?: Filter) {
@@ -626,7 +630,9 @@ if(mode === 'mysql') {
       
       const offset = (currentPage - 1) * perPage;
 
-      const baseQuery = this.orm.clone().where((builder) => {
+      const baseQuery = this.orm.clone().select(
+        filter?.fields ? filter.fields : "*"
+      ).where((builder) => {
         this.applyFilters(builder, filter);
       });
 
@@ -663,35 +669,73 @@ if(mode === 'mysql') {
     async create(data: ${domainCamel}${modeTitle}Entity, traceId?: string): Promise<${domainCamel}${modeTitle}Entity> {
       logger.info(this.create.name, ${domainCamel}${modeTitle}Repository.name, traceId);
     
-      const [created] = await this.orm
-        .clone()
-        .insert(data)
-        .returning("*");
-    
-      return created;
+      const connection = await this.orm.client.acquireConnection();
+
+      try {
+        const promiseConnection = connection.promise();
+        
+        const [insertResult] = await promiseConnection.query(
+          'INSERT INTO ?? SET ?', 
+          [this.tableName, data]
+        );
+        
+        const [rows] = await promiseConnection.query(
+          'SELECT * FROM ?? WHERE id = ?', 
+          [this.tableName, insertResult.insertId]
+        );
+        
+        const created = rows[0];
+        
+        if (!created) {
+          throw new ApplicationError(HttpError('Failed to insert data').INTERNAL_SERVER_ERROR)
+        }
+
+        return created;
+      } finally {
+        this.orm.client.releaseConnection(connection);
+      }
     }
     
     async update(id: number, data: Partial<${domainCamel}${modeTitle}Entity>, traceId?: string): Promise<${domainCamel}${modeTitle}Entity | null> {
       logger.info(this.update.name, ${domainCamel}${modeTitle}Repository.name, traceId);
     
-      const [updated] = await this.orm
-        .clone()
-        .where({ id })
-        .update(data)
-        .returning("*");
-    
-      return updated ?? null;
+       const connection = await this.orm.client.acquireConnection();
+
+      try {
+        const promiseConnection = connection.promise();
+
+        await promiseConnection.query(
+          'UPDATE ?? SET ? WHERE id = ?', 
+          [this.tableName, removeUndefinedField(data), id]
+        );
+        
+        const [updated] = await promiseConnection.query(
+          'SELECT * FROM ?? WHERE id = ?', 
+          [this.tableName, id]
+        );
+        
+        return updated;
+      } finally {
+        this.orm.client.releaseConnection(connection);
+      }
     }
     
     async delete(id: number, traceId?: string): Promise<boolean> {
       logger.info(this.delete.name, ${domainCamel}${modeTitle}Repository.name, traceId);
     
-      const deletedCount = await this.orm
-        .clone()
-        .where({ id })
-        .delete();
-    
-      return deletedCount > 0;
+      const connection = await this.orm.client.acquireConnection();
+      const promiseConnection = connection.promise();
+
+      try {
+        const result = await promiseConnection.query(
+          'DELETE FROM ?? WHERE id = ?', 
+          [this.tableName, id]
+        );
+        
+        return result.affectedRows > 0;
+      } finally {
+        this.orm.client.releaseConnection(connection);
+      }
     }
   }
   `
@@ -721,14 +765,14 @@ if(mode === 'mysql') {
   import { Stats } from "@domain/stats";
 
   export class ${domainCamel}${modeTitle}Adapter implements I${domainCamel}${modeTitle}Adapter {
-    private userSqlRepository: I${domainCamel}${modeTitle}Repository
+    private ${domainCamel}SqlRepository: I${domainCamel}${modeTitle}Repository
 
     constructor(){
-      this.userSqlRepository = new ${domainCamel}${modeTitle}Repository();
+      this.${domainCamel}SqlRepository = new ${domainCamel}${modeTitle}Repository();
     }
     async getAll(currentPage?: number, perPage?: number, filter?: Filter, traceId?: string): Promise<{ data: ${domainCamel}[]; stats: Stats; }> {
       logger.info(this.getAll.name, ${domainCamel}${modeTitle}Adapter.name, traceId);
-      const { data, stats } = await this.userSqlRepository.getAll(currentPage, perPage, filter, traceId);
+      const { data, stats } = await this.${domainCamel}SqlRepository.getAll(currentPage, perPage, filter, traceId);
 
       return {
         data: data.map((${domainSnake}) => toDomain(${domainSnake})),
@@ -738,7 +782,7 @@ if(mode === 'mysql') {
     
     async getById(id: number, traceId?: string): Promise<${domainCamel} | null> {
       logger.info(this.getById.name, ${domainCamel}${modeTitle}Adapter.name, traceId);
-      const ${domainSnake} = await this.userSqlRepository.getById(id, traceId);
+      const ${domainSnake} = await this.${domainCamel}SqlRepository.getById(id, traceId);
       if (!${domainSnake}) return null;
 
       return toDomain(${domainSnake});
@@ -746,12 +790,12 @@ if(mode === 'mysql') {
     
     async create(data: ${domainCamel}, traceId?: string): Promise<${domainCamel}> {
       logger.info(this.create.name, ${domainCamel}${modeTitle}Adapter.name, traceId);
-      return toDomain(await this.userSqlRepository.create(toEntity(data), traceId));
+      return toDomain(await this.${domainCamel}SqlRepository.create(toEntity(data), traceId));
     }
     
     async update(id: number, data: Partial<${domainCamel}>, traceId?: string): Promise<Partial<${domainCamel}> | null> {
       logger.info(this.update.name, ${domainCamel}${modeTitle}Adapter.name, traceId);
-      const ${domainSnake} = await this.userSqlRepository.update(id, toPartialEntity(data), traceId);
+      const ${domainSnake} = await this.${domainCamel}SqlRepository.update(id, toPartialEntity(data), traceId);
       if (!${domainSnake}) return null;
 
       return toPartialDomain(${domainSnake});
@@ -759,7 +803,7 @@ if(mode === 'mysql') {
     
     async delete(id: number, traceId?: string): Promise<boolean> {
       logger.info(this.delete.name, ${domainCamel}${modeTitle}Adapter.name, traceId);
-      return await this.userSqlRepository.delete(id, traceId);
+      return await this.${domainCamel}SqlRepository.delete(id, traceId);
     }
     
   }
