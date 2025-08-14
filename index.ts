@@ -6,13 +6,11 @@ import dotenv from "dotenv"
 
 import cookieParser from 'cookie-parser';
 import { loggingMiddleware } from './src/util/logger/logging';
-import { initMysql } from './src/util/mysql/mysql';
-import { initMongo } from './src/util/mongodb/mongodb';
 
-import { initRabbitMQ } from './src/util/rabbitmq/rabbitmq';
-import { initRedis } from './src/util/redis/redis';
-import { config } from './src/config/config';
-import { AuthRestController } from './src/adapter/in/rest/auth/controller/auth.controller';
+import { AuthRestController } from '@adapter_in/rest/auth/controller/auth.controller';
+import { config } from '@config';
+import { initMysql } from '@mysql';
+import { initRedis } from '@util/redis/redis';
 
 
 const app: Express = express()
